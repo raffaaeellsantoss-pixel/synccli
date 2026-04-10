@@ -10,6 +10,7 @@ public class ClipboardController {
     @MessageMapping("/send")
     @SendTo("/topic/clipboard")
     public String send(String message) {
+        System.out.println("Recebido: " + message);
         return message;
     }
 }
