@@ -87,7 +87,7 @@
         localStorage.setItem("sessionId", sessionId);
     }
 
-    const socket = new WebSocket(`wss://synccli.vercel.app/raw?sessionId=${sessionId}`);
+    const socket = new WebSocket(`wss://synccli-production.up.railway.app/raw?sessionId=${sessionId}`);
     const statusEl = document.getElementById("status");
 
     socket.onopen = () => {
