@@ -3,66 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>SyncCli</title>
 
-    <style>
-        * { box-sizing: border-box; font-family: sans-serif; }
+    <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
 
+    <style>
         body {
             margin: 0;
             background: #0f172a;
             color: white;
+            font-family: sans-serif;
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
         }
 
         .container {
-            width: 100%;
             max-width: 420px;
+            width: 100%;
             padding: 20px;
         }
 
-        h1 {
-            text-align: center;
-            color: #38bdf8;
-        }
+        h1 { text-align: center; color: #38bdf8; }
 
         .subtitle {
             text-align: center;
             font-size: 14px;
             color: #94a3b8;
-            margin-bottom: 20px;
+        }
+
+        #qrcode {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
         }
 
         textarea {
             width: 100%;
-            height: 160px;
-            padding: 15px;
-            border-radius: 12px;
-            border: none;
+            height: 150px;
+            padding: 10px;
+            border-radius: 10px;
             background: #1e293b;
             color: white;
-            font-size: 16px;
+            border: none;
         }
 
         button {
             width: 100%;
-            margin-top: 15px;
+            margin-top: 10px;
             padding: 15px;
+            border-radius: 10px;
             border: none;
-            border-radius: 12px;
             background: #22c55e;
             color: white;
-            font-size: 18px;
         }
 
         .status {
-            margin-top: 10px;
             text-align: center;
-            font-size: 14px;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -71,23 +68,35 @@
 
 <div class="container">
     <h1>📋 SyncCli</h1>
-    <div class="subtitle">Do celular → Ctrl+V no PC</div>
+    <div class="subtitle">Escaneie no celular ou cole texto abaixo</div>
+
+    <div id="qrcode"></div>
+    <div id="roomDisplay" class="subtitle"></div>
 
     <textarea id="message" placeholder="Cole aqui..."></textarea>
     <button onclick="sendMessage()">Enviar</button>
 
-    <div id="status" class="status">Conectando...</div>
+    <div id="status" class="status"></div>
 </div>
 
 <script>
-    // 🔐 sessão única
-    let sessionId = localStorage.getItem("sessionId");
-    if (!sessionId) {
-        sessionId = crypto.randomUUID();
-        localStorage.setItem("sessionId", sessionId);
+    const params = new URLSearchParams(window.location.search);
+    let roomId = params.get("roomId");
+
+    // se não tiver room → gera (PC)
+    if (!roomId) {
+        roomId = Math.random().toString(36).substring(2, 8);
+
+        const url = `${window.location.origin}?roomId=${roomId}`;
+
+        QRCode.toCanvas(document.createElement('canvas'), url, function (err, canvas) {
+            document.getElementById("qrcode").appendChild(canvas);
+        });
+
+        document.getElementById("roomDisplay").textContent = "Código: " + roomId;
     }
 
-    const socket = new WebSocket(`wss://synccli-production.up.railway.app/raw?sessionId=${sessionId}`);
+    const socket = new WebSocket(`wss://synccli-production.up.railway.app/raw?roomId=${roomId}`);
     const statusEl = document.getElementById("status");
 
     socket.onopen = () => {
@@ -96,10 +105,7 @@
 
     socket.onmessage = async (event) => {
         const text = event.data;
-
-        // copia no clipboard do PC
         await navigator.clipboard.writeText(text);
-
         statusEl.textContent = "Copiado no PC ✅";
     };
 
@@ -108,24 +114,13 @@
         const text = input.value;
 
         if (!text) {
-            statusEl.textContent = "Cole um comando antes de enviar 😉";
+            statusEl.textContent = "Cole algo antes 😉";
             return;
         }
 
         socket.send(text);
-
-        saveHistory(text);
-
         statusEl.textContent = "Enviado 🚀";
         input.value = "";
-    }
-
-    // 💾 histórico local
-    function saveHistory(text) {
-        let history = JSON.parse(localStorage.getItem("history") || "[]");
-        history.unshift(text);
-        history = history.slice(0, 10);
-        localStorage.setItem("history", JSON.stringify(history));
     }
 </script>
 
