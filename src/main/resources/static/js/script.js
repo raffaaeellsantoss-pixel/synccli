@@ -1,6 +1,9 @@
 const params = new URLSearchParams(window.location.search);
 const urlRoomId = params.get("roomId");
 
+let resetTimeout;
+let connected = false;
+
 let socket;
 let roomId;
 
@@ -48,7 +51,7 @@ function connectRoom() {
     document.querySelector(".mobile button").disabled = true;
 }
 
-let connected = false;
+
 // 🔌 conexão websocket
 function connect(id) {
 
@@ -79,20 +82,30 @@ function connect(id) {
         }
     };
 
-    socket.onmessage = async (event) => {
+   socket.onmessage = async (event) => {
 
-        if (!isMobile) {
-            try {
-                await navigator.clipboard.writeText(event.data);
-                pcStatus.textContent = "Copiado! Ctrl+V ✅";
-            } catch (e) {
-                pcStatus.textContent = "Clique para copiar ⚠️";
-                showCopyButton(event.data);
-            }
-        } else {
-            statusEl.textContent = "Enviado e recebido no PC ✅";
-        }
-    };
+       if (!isMobile) {
+           try {
+               await navigator.clipboard.writeText(event.data);
+
+               pcStatus.textContent = "Copiado! Ctrl+V ✅";
+
+               // limpa timeout anterior
+               if (resetTimeout) clearTimeout(resetTimeout);
+
+               // após 3 segundos volta ao padrão
+               resetTimeout = setTimeout(() => {
+                   pcStatus.textContent = "Aguardando envio...";
+               }, 3000);
+
+           } catch (e) {
+               pcStatus.textContent = "Erro ao copiar ⚠️";
+           }
+
+       } else {
+           statusEl.textContent = "Enviado e recebido no PC ✅";
+       }
+   };
 }
 
 // 📤 envio
