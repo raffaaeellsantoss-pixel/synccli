@@ -82,30 +82,51 @@ function connect(id) {
         }
     };
 
-   socket.onmessage = async (event) => {
+ socket.onmessage = async (event) => {
 
-       if (!isMobile) {
-           try {
-               await navigator.clipboard.writeText(event.data);
+     if (!isMobile) {
 
-               pcStatus.textContent = "Copiado! Ctrl+V ✅";
+         const text = event.data;
 
-               // limpa timeout anterior
-               if (resetTimeout) clearTimeout(resetTimeout);
+         try {
+             await navigator.clipboard.writeText(text);
 
-               // após 3 segundos volta ao padrão
-               resetTimeout = setTimeout(() => {
-                   pcStatus.textContent = "Aguardando envio...";
-               }, 3000);
+             pcStatus.textContent = "Copiado! Ctrl+V ✅";
+             hideCopyButton();
 
-           } catch (e) {
-               pcStatus.textContent = "Erro ao copiar ⚠️";
-           }
+         } catch (e) {
+             pcStatus.textContent = "Clique para copiar ⚠️";
+             showCopyButton(text);
+         }
 
-       } else {
-           statusEl.textContent = "Enviado e recebido no PC ✅";
-       }
-   };
+         // reset status depois de 3s
+         if (resetTimeout) clearTimeout(resetTimeout);
+
+         resetTimeout = setTimeout(() => {
+             pcStatus.textContent = "Aguardando envio...";
+             hideCopyButton();
+         }, 3000);
+
+     } else {
+         statusEl.textContent = "Enviado e recebido no PC ✅";
+     }
+ };
+}
+
+function showCopyButton(text) {
+    const btn = document.getElementById("copyBtn");
+
+    btn.style.display = "block";
+
+    btn.onclick = async () => {
+        await navigator.clipboard.writeText(text);
+        pcStatus.textContent = "Copiado manualmente ✅";
+    };
+}
+
+function hideCopyButton() {
+    const btn = document.getElementById("copyBtn");
+    btn.style.display = "none";
 }
 
 // 📤 envio
