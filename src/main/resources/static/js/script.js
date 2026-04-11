@@ -43,10 +43,12 @@ function connectRoom() {
 
     connect(roomId);
 
-    // 🔒 bloqueia edição após conectar
+    // 🔒 trava input + botão
     input.disabled = true;
+    document.querySelector(".mobile button").disabled = true;
 }
 
+let connected = false;
 // 🔌 conexão websocket
 function connect(id) {
 
@@ -54,21 +56,22 @@ function connect(id) {
 
     socket = new WebSocket(`wss://synccli-production.up.railway.app/raw?roomId=${id}`);
 
-    socket.onopen = () => {
-        if (isMobile) {
-            statusEl.textContent = "Conectado ✅";
-        } else {
-            pcStatus.textContent = "Aguardando envio...";
-        }
-    };
+       socket.onopen = () => {
+           connected = true;
 
-    socket.onclose = () => {
-        if (isMobile) {
-            statusEl.textContent = "Desconectado ❌";
-        } else {
-            pcStatus.textContent = "Desconectado ❌";
-        }
-    };
+           if (isMobile) {
+               statusEl.textContent = "Conectado ✅";
+           } else {
+               pcStatus.textContent = "Aguardando envio...";
+           }
+       };
+
+       // 👇 valida conexão após 2s
+       setTimeout(() => {
+           if (!connected && isMobile) {
+               statusEl.textContent = "Código inválido ❌";
+           }
+       }, 2000);
 
     socket.onerror = () => {
         if (isMobile) {
@@ -79,8 +82,13 @@ function connect(id) {
     socket.onmessage = async (event) => {
 
         if (!isMobile) {
-            await navigator.clipboard.writeText(event.data);
-            pcStatus.textContent = "Copiado! Pode colar (Ctrl+V) ✅";
+            try {
+                await navigator.clipboard.writeText(event.data);
+                pcStatus.textContent = "Copiado! Ctrl+V ✅";
+            } catch (e) {
+                pcStatus.textContent = "Clique para copiar ⚠️";
+                showCopyButton(event.data);
+            }
         } else {
             statusEl.textContent = "Enviado e recebido no PC ✅";
         }
