@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,21 +10,26 @@
 
     <style>
         body {
+            width: 100vw;
             margin: 0;
             font-family: sans-serif;
             background: #0f172a;
             color: white;
+            overflow: hidden;
         }
 
         /* Layout desktop */
         .wrapper {
             display: flex;
-            height: 100vh;
+            margin-top: 10%;
+            height: 100%;
+            justify-content: space-around;
+
         }
 
         /* Lado esquerdo */
         .left {
-            flex: 1;
+
             padding: 40px;
             display: flex;
             flex-direction: column;
@@ -43,7 +49,7 @@
 
         /* Lado direito */
         .right {
-            flex: 1;
+
             display: flex;
             justify-content: center;
             align-items: center;
@@ -68,7 +74,7 @@
         }
 
         textarea {
-            width: 100%;
+            width: 95%;
             height: 120px;
             border-radius: 10px;
             border: none;
@@ -78,7 +84,7 @@
         }
 
         input {
-            width: 100%;
+            width: 93%;
             padding: 12px;
             border-radius: 10px;
             border: none;
@@ -99,11 +105,18 @@
 
         /* Ajuda */
         .help {
-            position: fixed;
-            top: 15px;
-            right: 15px;
+
             cursor: pointer;
             font-size: 20px;
+        }
+
+
+
+        .nav {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         /* Popup */
@@ -129,15 +142,36 @@
 
         /* Responsivo */
         @media (max-width: 768px) {
-            .wrapper { display: none; }
-            .mobile { display: block; }
+
+
+            body {
+                height: 100vh;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: stretch;
+            }
+
+            .wrapper {
+                display: none;
+            }
+
+            .mobile {
+                display: block;
+            }
         }
     </style>
 </head>
 
 <body>
 
-<div class="help" onclick="toggleHelp()">❓</div>
+<div class="nav">
+    <div class="logo">
+        <h1>📋 SyncCli</h1>
+    </div>
+    <div class="help" onclick="toggleHelp()">❓</div>
+</div>
+
 
 <!-- DESKTOP -->
 <div class="wrapper">
@@ -170,6 +204,9 @@
 
     <textarea id="message" placeholder="Cole aqui..."></textarea>
     <button onclick="sendMessage()">Enviar</button>
+    <div id="status" style="text-align:center; margin-top:10px; color:#94a3b8;">
+        Desconectado ❌
+    </div>
 </div>
 
 <!-- POPUP -->
@@ -189,12 +226,19 @@
 </footer>
 
 <script>
+    const params = new URLSearchParams(window.location.search);
+    const urlRoomId = params.get("roomId");
+
     let socket;
     let roomId;
 
-    // detectar mobile
     const isMobile = window.innerWidth <= 768;
 
+    // se veio do QR → conecta automático
+    if (urlRoomId) {
+        roomId = urlRoomId;
+        connect(roomId);
+    }
     // gerar QR no desktop
     if (!isMobile) {
         roomId = Math.random().toString(36).substring(2, 8);
@@ -217,22 +261,53 @@
         connect(roomId);
     }
 
-    // websocket
     function connect(id) {
-        socket = new WebSocket(`wss://SEU_BACKEND/raw?roomId=${id}`);
+        const statusEl = document.getElementById("status");
+
+        socket = new WebSocket(`wss://synccli-production.up.railway.app/raw?roomId=${id}`);
+
+        if (socket && socket.readyState === WebSocket.OPEN) {
+            socket.close();
+        }
+
+        socket.onopen = () => {
+            statusEl.textContent = "Conectado ✅";
+        };
+
+        socket.onclose = () => {
+            statusEl.textContent = "Desconectado ❌";
+        };
+
+        socket.onerror = () => {
+            statusEl.textContent = "Erro na conexão ⚠️";
+        };
 
         socket.onmessage = async (event) => {
             await navigator.clipboard.writeText(event.data);
+
+            statusEl.textContent = "Texto copiado! Agora é só colar (Ctrl+V) ✅";
         };
     }
 
-    // enviar
     function sendMessage() {
-        const text = document.getElementById("message").value;
-        if (!text) return alert("Cole algo antes 😉");
+        const input = document.getElementById("message");
+        const statusEl = document.getElementById("status");
+        const text = input.value;
+
+        if (!text) {
+            statusEl.textContent = "Cole algo antes 😉";
+            return;
+        }
+
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+            statusEl.textContent = "Não conectado ❌";
+            return;
+        }
 
         socket.send(text);
-        document.getElementById("message").value = "";
+
+        statusEl.textContent = "Enviado 🚀 Aguardando chegada no PC...";
+        input.value = "";
     }
 
     // popup ajuda
@@ -243,4 +318,5 @@
 </script>
 
 </body>
+
 </html>
