@@ -104,7 +104,7 @@ function connect(id) {
 
          resetTimeout = setTimeout(() => {
              pcStatus.textContent = "Aguardando envio...";
-             hideCopyButton();
+
          }, 3000);
 
      } else {
@@ -120,6 +120,7 @@ function showCopyButton(text) {
 
     btn.onclick = async () => {
         await navigator.clipboard.writeText(text);
+        hideCopyButton();
         pcStatus.textContent = "Copiado manualmente ✅";
     };
 }
