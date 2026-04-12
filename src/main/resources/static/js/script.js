@@ -12,6 +12,10 @@ const isMobile = window.innerWidth <= 768;
 const statusEl = document.getElementById("status");
 const pcStatus = document.getElementById("pcStatus");
 
+document.addEventListener("DOMContentLoaded", () => {
+    hideCopyButton();
+});
+
 // 📱 MOBILE vindo do QR
 if (isMobile && urlRoomId) {
     roomId = urlRoomId;
@@ -82,36 +86,35 @@ function connect(id) {
         }
     };
 
- socket.onmessage = async (event) => {
+socket.onmessage = async (event) => {
 
-     if (!isMobile) {
+    if (!isMobile) {
 
-         const text = event.data;
+        const text = event.data;
 
-         try {
-             await navigator.clipboard.writeText(text);
+        try {
+            await navigator.clipboard.writeText(text);
 
-             pcStatus.textContent = "Copiado! Ctrl+V ✅";
-             hideCopyButton();
+            pcStatus.textContent = "Copiado! Ctrl+V ✅";
 
-         } catch (e) {
-             pcStatus.textContent = "Clique para copiar ⚠️";
-             showCopyButton(text);
-         }
 
-         // reset status depois de 3s
-         if (resetTimeout) clearTimeout(resetTimeout);
 
-         resetTimeout = setTimeout(() => {
-             pcStatus.textContent = "Aguardando envio...";
+        } catch (e) {
+            pcStatus.textContent = "Clique para copiar ⚠️";
+            showCopyButton(text);
+        }
 
-         }, 3000);
+        // reset apenas do status
+        if (resetTimeout) clearTimeout(resetTimeout);
 
-     } else {
-         statusEl.textContent = "Enviado e recebido no PC ✅";
-     }
- };
-}
+        resetTimeout = setTimeout(() => {
+            pcStatus.textContent = "Aguardando envio...";
+        }, 3000);
+
+    } else {
+        statusEl.textContent = "Enviado e recebido no PC ✅";
+    }
+};
 
 function showCopyButton(text) {
     const btn = document.getElementById("copyBtn");
