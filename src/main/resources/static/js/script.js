@@ -11,7 +11,9 @@ const isMobile = window.innerWidth <= 768;
 
 const statusEl = document.getElementById("status");
 const pcStatus = document.getElementById("pcStatus");
+const copyBtn = document.getElementById("copyBtn");
 
+// garante estado inicial
 document.addEventListener("DOMContentLoaded", () => {
     hideCopyButton();
 });
@@ -47,38 +49,39 @@ function connectRoom() {
     }
 
     roomId = input.value;
-
     connect(roomId);
 
-    // 🔒 trava input + botão
     input.disabled = true;
     document.querySelector(".mobile button").disabled = true;
 }
 
-
 // 🔌 conexão websocket
 function connect(id) {
 
-    if (socket && socket.readyState === WebSocket.OPEN) return;
+    connected = false;
+
+    if (socket) {
+        socket.close();
+    }
 
     socket = new WebSocket(`wss://synccli-production.up.railway.app/raw?roomId=${id}`);
 
-       socket.onopen = () => {
-           connected = true;
+    socket.onopen = () => {
+        connected = true;
 
-           if (isMobile) {
-               statusEl.textContent = "Conectado ✅";
-           } else {
-               pcStatus.textContent = "Aguardando envio...";
-           }
-       };
+        if (isMobile) {
+            statusEl.textContent = "Conectado ✅";
+        } else {
+            pcStatus.textContent = "Aguardando envio...";
+        }
+    };
 
-       // 👇 valida conexão após 2s
-       setTimeout(() => {
-           if (!connected && isMobile) {
-               statusEl.textContent = "Código inválido ❌";
-           }
-       }, 2000);
+    // valida código inválido
+    setTimeout(() => {
+        if (!connected && isMobile) {
+            statusEl.textContent = "Código inválido ❌";
+        }
+    }, 2000);
 
     socket.onerror = () => {
         if (isMobile) {
@@ -86,51 +89,57 @@ function connect(id) {
         }
     };
 
-socket.onmessage = async (event) => {
+    socket.onmessage = async (event) => {
 
-    if (!isMobile) {
+        if (!isMobile) {
 
-        const text = event.data;
+            const text = event.data;
 
-        try {
-            await navigator.clipboard.writeText(text);
+            try {
+                await navigator.clipboard.writeText(text);
 
-            pcStatus.textContent = "Copiado! Ctrl+V ✅";
+                pcStatus.textContent = "Copiado! Ctrl+V ✅";
 
+                // NÃO mexe no botão aqui
 
+            } catch (e) {
+                pcStatus.textContent = "Clique para copiar ⚠️";
+                showCopyButton(text);
+            }
 
-        } catch (e) {
-            pcStatus.textContent = "Clique para copiar ⚠️";
-            showCopyButton(text);
+            // reset só do texto
+            if (resetTimeout) clearTimeout(resetTimeout);
+
+            resetTimeout = setTimeout(() => {
+                pcStatus.textContent = "Aguardando envio...";
+            }, 3000);
+
+        } else {
+            statusEl.textContent = "Enviado e recebido no PC ✅";
         }
-
-        // reset apenas do status
-        if (resetTimeout) clearTimeout(resetTimeout);
-
-        resetTimeout = setTimeout(() => {
-            pcStatus.textContent = "Aguardando envio...";
-        }, 3000);
-
-    } else {
-        statusEl.textContent = "Enviado e recebido no PC ✅";
-    }
-};
-
-function showCopyButton(text) {
-    const btn = document.getElementById("copyBtn");
-
-    btn.style.display = "block";
-
-    btn.onclick = async () => {
-        await navigator.clipboard.writeText(text);
-        hideCopyButton();
-        pcStatus.textContent = "Copiado manualmente ✅";
     };
 }
 
+// 🔘 mostrar botão
+function showCopyButton(text) {
+    copyBtn.style.display = "block";
+
+    copyBtn.onclick = async () => {
+        try {
+            await navigator.clipboard.writeText(text);
+
+            pcStatus.textContent = "Copiado manualmente ✅";
+            hideCopyButton();
+
+        } catch (e) {
+            pcStatus.textContent = "Erro ao copiar ⚠️";
+        }
+    };
+}
+
+// ❌ esconder botão
 function hideCopyButton() {
-    const btn = document.getElementById("copyBtn");
-    btn.style.display = "none";
+    copyBtn.style.display = "none";
 }
 
 // 📤 envio
