@@ -89,35 +89,40 @@ function connect(id) {
         }
     };
 
-    socket.onmessage = async (event) => {
+  socket.onmessage = async (event) => {
 
-        if (!isMobile) {
+      if (!isMobile) {
 
-            const text = event.data;
+          const text = event.data;
 
-            try {
-                await navigator.clipboard.writeText(text);
+          let copied = false;
 
-                pcStatus.textContent = "Copiado! Ctrl+V ✅";
+          try {
+              await navigator.clipboard.writeText(text);
+              copied = true;
+          } catch (e) {
+              copied = false;
+          }
 
-                // NÃO mexe no botão aqui
+          if (copied) {
+              pcStatus.textContent = "Copiado! Ctrl+V ✅";
+              hideCopyButton();
+          } else {
+              pcStatus.textContent = "Clique para copiar ⚠️";
+              showCopyButton(text);
+          }
 
-            } catch (e) {
-                pcStatus.textContent = "Clique para copiar ⚠️";
-                showCopyButton(text);
-            }
+          // reset só do texto (não mexe no botão)
+          if (resetTimeout) clearTimeout(resetTimeout);
 
-            // reset só do texto
-            if (resetTimeout) clearTimeout(resetTimeout);
+          resetTimeout = setTimeout(() => {
+              pcStatus.textContent = "Aguardando envio...";
+          }, 3000);
 
-            resetTimeout = setTimeout(() => {
-                pcStatus.textContent = "Aguardando envio...";
-            }, 3000);
-
-        } else {
-            statusEl.textContent = "Enviado e recebido no PC ✅";
-        }
-    };
+      } else {
+          statusEl.textContent = "Enviado e recebido no PC ✅";
+      }
+  };
 }
 
 // 🔘 mostrar botão
